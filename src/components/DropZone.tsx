@@ -74,7 +74,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".jpg,.jpeg,.heic,.heif,.gpx"
+          accept=".jpg,.jpeg,.heic,.heif,.png,.webp,.avif,.tif,.tiff,.dng,.gpx,image/*"
           onChange={handleFileChange}
           className="hidden"
         />

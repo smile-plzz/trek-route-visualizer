@@ -66,3 +66,15 @@
 - Synchronized day filtering across 3D Map, Elevation Profile scrubber, Telemetry HUD metrics, and Video Export.
 - Added unit tests in `src/services/multiDaySplitter.test.ts`.
 - Verification: 25 unit tests passed across 9 test suites; `npm run build` completed with zero errors.
+
+
+## [2026-11-04 02:58:00 +06:00] - Fix EXIF GPS Extraction Bug & Expand Image Formats
+- **Root Cause Identified**: The `pick: ['latitude', 'longitude']` parameter in `exifr.parse()` caused `exifr` to discard raw TIFF GPS tags (`GPSLatitude`, `GPSLongitude`, etc.) because `'latitude'` is a synthesized property rather than an EXIF tag key. This caused `exifr` to return `undefined` on all geotagged photos.
+- **Fix Implemented**:
+  - Removed restrictive `pick` filter; `exifr` now parses the 64KB header and synthesizes `latitude`, `longitude`, and `GPSAltitude` properly.
+  - Added multi-tier fallback: `exifr.gps(file)` and direct `ArrayBuffer` extraction.
+  - Expanded accepted image types to include `.png`, `.webp`, `.avif`, `.tif`, `.tiff`, `.dng`, and `image/*`.
+  - Added helpful diagnostics explaining why messaging-app transfers strip EXIF data.
+- **Verification**:
+  - Added real binary TIFF GPS header parsing unit test in `src/services/exifParser.test.ts`.
+  - 26 unit tests passed; `npm run build` completed with zero errors.

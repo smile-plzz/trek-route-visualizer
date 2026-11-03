@@ -172,7 +172,14 @@ export const App: React.FC = () => {
           ext.endsWith('.jpg') ||
           ext.endsWith('.jpeg') ||
           ext.endsWith('.heic') ||
-          ext.endsWith('.heif')
+          ext.endsWith('.heif') ||
+          ext.endsWith('.png') ||
+          ext.endsWith('.webp') ||
+          ext.endsWith('.avif') ||
+          ext.endsWith('.tif') ||
+          ext.endsWith('.tiff') ||
+          ext.endsWith('.dng') ||
+          f.type.startsWith('image/')
         );
       });
 
@@ -207,7 +214,9 @@ export const App: React.FC = () => {
 
         if (validPoints.length < 2) {
           alert(
-            `Found ${validPoints.length} geotagged photo(s). At least 2 geotagged photos are required to reconstruct a trek route.`
+            `Found ${validPoints.length} geotagged photo(s) out of ${totalCount} file(s).\n\n` +
+            `At least 2 geotagged photos are required to reconstruct a trek route.\n\n` +
+            `Note: If these photos were transferred via messaging apps (WhatsApp, Telegram, Facebook Messenger, AirDrop without 'All Photos Data'), the GPS metadata was stripped. Please upload original photos taken directly on your device, or drop a GPX track file.`
           );
           setIsLoading(false);
           return;
