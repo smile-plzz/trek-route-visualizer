@@ -14,8 +14,10 @@ import { ElevationChart } from './components/ElevationChart';
 import { PlaybackControls } from './components/PlaybackControls';
 import { ExportModal } from './components/ExportModal';
 import { PrivacyTrimModal } from './components/PrivacyTrimModal';
+import { DaySelector } from './components/DaySelector';
 import { applyPrivacyTrim } from './services/privacyTrim';
 import { downloadGpx } from './services/gpxExporter';
+import { splitRouteByDays, TrekDaySegment } from './services/multiDaySplitter';
 
 export const App: React.FC = () => {
   const [routeData, setRouteData] = useState<RouteProcessingResult | null>(null);
@@ -33,6 +35,7 @@ export const App: React.FC = () => {
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
   const [startTrimMeters, setStartTrimMeters] = useState<number>(0);
   const [endTrimMeters, setEndTrimMeters] = useState<number>(0);
+  const [selectedDay, setSelectedDay] = useState<number | 'all'>('all');
 
   const mapInstanceRef = useRef<Map | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
@@ -61,19 +64,41 @@ export const App: React.FC = () => {
     };
   }, [routeData, startTrimMeters, endTrimMeters]);
 
+  // Multi-day Segmentation
+  const daySegments = useMemo<TrekDaySegment[]>(() => {
+    if (!activeRoute || activeRoute.points.length === 0) return [];
+    return splitRouteByDays(activeRoute.points, activeRoute.stats);
+  }, [activeRoute]);
+
+  // Current Displayed Route (All Days or Filtered to Single Day)
+  const displayRoute = useMemo(() => {
+    if (!activeRoute) return null;
+    if (selectedDay === 'all' || daySegments.length <= 1) {
+      return activeRoute;
+    }
+    const targetSegment = daySegments.find((d) => d.dayNumber === selectedDay);
+    if (!targetSegment) return activeRoute;
+
+    return {
+      points: targetSegment.points,
+      stats: targetSegment.stats,
+      sourceType: activeRoute.sourceType,
+    };
+  }, [activeRoute, selectedDay, daySegments]);
+
   // Computed Current Position & Traveler State
   const travelerPosition = useMemo(() => {
-    if (!activeRoute || activeRoute.points.length === 0) return null;
-    const totalDist = activeRoute.points[activeRoute.points.length - 1].distance || 1;
+    if (!displayRoute || displayRoute.points.length === 0) return null;
+    const totalDist = displayRoute.points[displayRoute.points.length - 1].distance || 1;
     const currentDist = progress * totalDist;
-    return interpolateAtDistance(activeRoute.points, currentDist);
-  }, [activeRoute, progress]);
+    return interpolateAtDistance(displayRoute.points, currentDist);
+  }, [displayRoute, progress]);
 
   const currentDistance = useMemo(() => {
-    if (!activeRoute || activeRoute.points.length === 0) return 0;
-    const totalDist = activeRoute.points[activeRoute.points.length - 1].distance || 0;
+    if (!displayRoute || displayRoute.points.length === 0) return 0;
+    const totalDist = displayRoute.points[displayRoute.points.length - 1].distance || 0;
     return progress * totalDist;
-  }, [activeRoute, progress]);
+  }, [displayRoute, progress]);
 
   // Animation Loop (Distance-constant velocity)
   useEffect(() => {
@@ -240,10 +265,10 @@ export const App: React.FC = () => {
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans text-slate-100 flex flex-col">
       {/* 3D Map View (Underlay) */}
-      {activeRoute && (
+      {displayRoute && (
         <div className="absolute inset-0 z-0">
           <Map3D
-            points={activeRoute.points}
+            points={displayRoute.points}
             travelerPosition={travelerPosition}
             cameraMode={cameraMode}
             basemapStyle={basemapStyle}
@@ -256,7 +281,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Main UI Overlay */}
-      {!activeRoute ? (
+      {!displayRoute ? (
         /* State 1: Drop Zone / Landing Screen */
         <div className="relative z-10 flex-1 flex items-center justify-center p-4">
           <DropZone
@@ -270,15 +295,25 @@ export const App: React.FC = () => {
       ) : (
         /* State 2: Active Trek HUD & Controls Overlay */
         <div className="relative z-10 flex flex-col justify-between h-full pointer-events-none p-4 md:p-6">
-          {/* Top Row: Telemetry HUD */}
-          <div className="flex flex-col items-center w-full pointer-events-auto">
-            <TelemetryHUD stats={activeRoute.stats} sourceType={activeRoute.sourceType} />
+          {/* Top Row: Day Selector + Telemetry HUD */}
+          <div className="flex flex-col items-center gap-2 w-full pointer-events-auto">
+            {daySegments.length > 1 && (
+              <DaySelector
+                days={daySegments}
+                selectedDay={selectedDay}
+                onSelectDay={(day) => {
+                  setSelectedDay(day);
+                  setProgress(0);
+                }}
+              />
+            )}
+            <TelemetryHUD stats={displayRoute.stats} sourceType={displayRoute.sourceType} />
           </div>
 
           {/* Bottom Row: Elevation Profile & Playback Controls */}
           <div className="flex flex-col items-center gap-3 w-full max-w-4xl mx-auto pointer-events-auto">
             <ElevationChart
-              points={activeRoute.points}
+              points={displayRoute.points}
               currentDistance={currentDistance}
               onScrubDistance={handleScrubDistance}
             />
@@ -298,7 +333,7 @@ export const App: React.FC = () => {
               onBasemapStyleChange={setBasemapStyle}
               onExaggerationChange={setTerrainExaggeration}
               onOpenPrivacyTrim={() => setIsPrivacyModalOpen(true)}
-              onExportGpx={() => activeRoute && downloadGpx(activeRoute.points)}
+              onExportGpx={() => displayRoute && downloadGpx(displayRoute.points)}
               onOpenExport={() => {
                 setIsPlaying(false);
                 setIsExportModalOpen(true);
@@ -331,13 +366,13 @@ export const App: React.FC = () => {
       )}
 
       {/* Video Export Modal */}
-      {activeRoute && (
+      {displayRoute && (
         <ExportModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
           map={mapInstanceRef.current}
-          points={activeRoute.points}
-          stats={activeRoute.stats}
+          points={displayRoute.points}
+          stats={displayRoute.stats}
           currentCameraMode={cameraMode}
           onScrubDistance={handleScrubDistance}
         />

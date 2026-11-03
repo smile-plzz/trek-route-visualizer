@@ -58,3 +58,11 @@
 - Added unit tests in `src/services/gpxExporter.test.ts` including full roundtrip verification with `parseGpxString`.
 - Added **Export GPX** button in `PlaybackControls.tsx` for 1-click downloads.
 - Verification: 23 unit tests passed across 8 test suites; `npm run build` completed with zero errors.
+
+
+## [2026-11-04 02:03:00 +06:00] - Step 5: Multi-Day Trail Segmentation
+- Implemented `splitRouteByDays` in `src/services/multiDaySplitter.ts` detecting overnight rest gaps ($\ge 6\text{h}$) between timestamps.
+- Created `DaySelector.tsx` displaying interactive stage tabs (`[All Stages]` `[Day 1]` `[Day 2]...`) with date labels.
+- Synchronized day filtering across 3D Map, Elevation Profile scrubber, Telemetry HUD metrics, and Video Export.
+- Added unit tests in `src/services/multiDaySplitter.test.ts`.
+- Verification: 25 unit tests passed across 9 test suites; `npm run build` completed with zero errors.
