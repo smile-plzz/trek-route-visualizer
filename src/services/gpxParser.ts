@@ -86,3 +86,4 @@ export function parseGpxString(gpxText: string, filename?: string): RawPoint[] {
 
   return points;
 }
+

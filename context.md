@@ -29,3 +29,4 @@ Provide real-time telemetry stats (distance, elevation gain/loss, min/max altitu
 3. **Noisy Altitude Filtering**: Real-world phone GPS altitudes can fluctuate wildly; enrich elevation with AWS Terrarium DEM tiles at zoom 12 with a 4-meter hysteresis threshold to filter noise.
 4. **Resilience to sparse/missing data**: Skip non-geotagged photos cleanly without failing; fall back to filename sorting when timestamps are absent; provide informative summaries (e.g. "42 of 50 photos had GPS, 8 skipped").
 5. **Instant sample experience**: Provide a built-in sample route for 1-click test without requiring user files.
+

@@ -63,3 +63,4 @@ describe('routeProcessor', () => {
     expect(result.stats.lowestElevation).toBe(999);
   });
 });
+

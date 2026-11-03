@@ -36,3 +36,4 @@ export interface RouteProcessingResult {
   stats: TrekStats;
   sourceType: 'photos' | 'gpx' | 'mixed' | 'sample';
 }
+

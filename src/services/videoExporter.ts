@@ -204,3 +204,4 @@ export async function recordTrekVideo(
   recorder.stop();
   return recordingPromise;
 }
+

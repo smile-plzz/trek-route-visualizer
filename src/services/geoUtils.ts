@@ -147,3 +147,4 @@ export function lerpAngle(current: number, target: number, factor: number): numb
   if (diff < -180) diff += 360;
   return (current + diff * factor + 360) % 360;
 }
+

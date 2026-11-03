@@ -19,3 +19,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In-browser Video Exporter using canvas HUD compositing and `MediaRecorder`.
 - Built-in sample mountain trek route for 1-click evaluation.
 - Privacy guarantee: 100% client-side with zero server image uploads.
+

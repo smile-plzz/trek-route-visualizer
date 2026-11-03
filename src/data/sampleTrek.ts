@@ -27,3 +27,4 @@ export const SAMPLE_TREK_POINTS: RawPoint[] = [
   { lat: 45.9795, lng: 7.6792, gpsAltitude: 3210, time: 1723715160000, name: 'Final_Steep_Arrete.jpg' },
   { lat: 45.9790, lng: 7.6778, gpsAltitude: 3260, time: 1723715520000, name: 'Hornlihutte_Summit_Base.jpg' },
 ];
+

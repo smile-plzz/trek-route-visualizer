@@ -51,3 +51,4 @@ describe('geoUtils', () => {
     expect(smoothed).toBeCloseTo(0, 1);
   });
 });
+

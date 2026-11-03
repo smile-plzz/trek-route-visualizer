@@ -33,3 +33,4 @@ describe('gpxParser', () => {
     expect(points[0].name).toBe('test.gpx');
   });
 });
+
