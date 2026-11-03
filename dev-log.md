@@ -32,3 +32,12 @@
 - Added explicit user feedback in `TelemetryHUD` and `App.tsx` when both GPX and photos are supplied (GPX prioritization notice).
 - Added test coverage in `src/services/exifParser.test.ts` for non-geotagged and empty file sets.
 - Verification: 13 unit tests passed across 5 test suites; `npm run build` completed with zero errors.
+
+
+## [2026-11-04 01:54:00 +06:00] - Step 2: Video Aspect Ratio Presets (16:9, 9:16, 1:1)
+- Implemented `VideoAspectRatio` support for 16:9 Landscape, 9:16 Portrait (Shorts/Reels/TikTok), and 1:1 Square (Instagram Feed).
+- Built responsive canvas compositor in `videoExporter.ts` that center-crops WebGL map frames without aspect distortion.
+- Designed adaptive HUD overlay: dual 2x2 stacked cards for 9:16 vertical view, and 3-column banner for 16:9 landscape / 1:1 square view.
+- Added aspect ratio selector buttons with icons in `ExportModal.tsx`.
+- Added unit tests in `src/services/videoExporter.test.ts`.
+- Verification: 17 unit tests passed across 6 test suites; `npm run build` completed with zero errors.

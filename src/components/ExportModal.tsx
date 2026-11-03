@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { X, Video, Download, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, Video, Download, CheckCircle, AlertTriangle, Loader2, Smartphone, Monitor, Square } from 'lucide-react';
 import { CameraMode, TrekPoint, TrekStats } from '../types';
-import { recordTrekVideo, getSupportedMimeType } from '../services/videoExporter';
+import {
+  recordTrekVideo,
+  getSupportedMimeType,
+  VideoAspectRatio,
+  getExportDimensions,
+} from '../services/videoExporter';
 import { Map } from 'maplibre-gl';
 
 interface ExportModalProps {
@@ -25,6 +30,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 }) => {
   const [durationSec, setDurationSec] = useState<number>(20);
   const [resolution, setResolution] = useState<'720p' | '1080p'>('1080p');
+  const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>('16:9');
   const [cameraMode, setCameraMode] = useState<CameraMode>(currentCameraMode);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
@@ -32,6 +38,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [downloadExt, setDownloadExt] = useState<string>('webm');
 
   if (!isOpen) return null;
+
+  const targetDims = getExportDimensions(aspectRatio, resolution);
 
   const handleStartExport = async () => {
     if (!map || points.length < 2) return;
@@ -50,6 +58,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         {
           durationSec,
           resolution,
+          aspectRatio,
           cameraMode,
           onProgress: (pct) => setProgressPercent(pct),
         },
@@ -62,7 +71,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       // Auto trigger download
       const a = document.createElement('a');
       a.href = url;
-      a.download = `trek_route_${Date.now()}.${extension}`;
+      a.download = `trek_route_${aspectRatio.replace(':', 'x')}_${Date.now()}.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -76,7 +85,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl text-slate-100">
+      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl text-slate-100 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         {!isRecording && (
           <button
@@ -119,7 +128,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               />
             </div>
             <span className="text-[11px] font-mono text-slate-500">
-              Rendering at {resolution} (30 FPS)
+              Rendering {aspectRatio} at {targetDims.width}×{targetDims.height} (30 FPS)
             </span>
           </div>
         ) : downloadUrl ? (
@@ -132,13 +141,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               Video Generated Successfully!
             </h4>
             <p className="text-xs text-slate-400 mb-6 max-w-xs">
-              Your trek animation has downloaded automatically. You can also re-download it below.
+              Your {aspectRatio} trek animation has downloaded automatically. You can also re-download it below.
             </p>
 
             <div className="flex gap-3 w-full">
               <a
                 href={downloadUrl}
-                download={`trek_route_${Date.now()}.${downloadExt}`}
+                download={`trek_route_${aspectRatio.replace(':', 'x')}_${Date.now()}.${downloadExt}`}
                 className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all"
               >
                 <Download className="w-4 h-4" />
@@ -155,6 +164,53 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         ) : (
           /* Config State */
           <div className="space-y-5">
+            {/* Aspect Ratio Presets (16:9, 9:16, 1:1) */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Aspect Ratio
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setAspectRatio('16:9')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1.5 ${
+                    aspectRatio === '16:9'
+                      ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Monitor className="w-4 h-4" />
+                  <span>16:9 Landscape</span>
+                  <span className="text-[10px] opacity-75 font-mono">Desktop / YT</span>
+                </button>
+
+                <button
+                  onClick={() => setAspectRatio('9:16')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1.5 ${
+                    aspectRatio === '9:16'
+                      ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>9:16 Portrait</span>
+                  <span className="text-[10px] opacity-75 font-mono">Reels / Shorts</span>
+                </button>
+
+                <button
+                  onClick={() => setAspectRatio('1:1')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1.5 ${
+                    aspectRatio === '1:1'
+                      ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Square className="w-4 h-4" />
+                  <span>1:1 Square</span>
+                  <span className="text-[10px] opacity-75 font-mono">Feed Post</span>
+                </button>
+              </div>
+            </div>
+
             {/* Length Option */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
@@ -192,7 +248,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   }`}
                 >
                   <span>1080p Full HD</span>
-                  <span className="text-[10px] opacity-75 font-mono">1920×1080</span>
+                  <span className="text-[10px] opacity-75 font-mono">
+                    {targetDims.width}×{targetDims.height}
+                  </span>
                 </button>
                 <button
                   onClick={() => setResolution('720p')}
@@ -203,7 +261,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   }`}
                 >
                   <span>720p HD</span>
-                  <span className="text-[10px] opacity-75 font-mono">1280×720</span>
+                  <span className="text-[10px] opacity-75 font-mono">
+                    {aspectRatio === '9:16' ? '720×1280' : aspectRatio === '1:1' ? '720×720' : '1280×720'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -257,7 +317,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-sm shadow-xl shadow-sky-500/25 active:scale-98 transition-all flex items-center justify-center gap-2"
             >
               <Video className="w-4 h-4" />
-              <span>Start Recording ({durationSec}s Video)</span>
+              <span>Start Recording ({durationSec}s • {aspectRatio})</span>
             </button>
           </div>
         )}
@@ -265,4 +325,3 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     </div>
   );
 };
-
