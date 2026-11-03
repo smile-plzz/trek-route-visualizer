@@ -10,6 +10,7 @@ import {
   Layers,
   Sparkles,
   Shield,
+  FileDown,
 } from 'lucide-react';
 import { CameraMode, BasemapStyle } from '../types';
 
@@ -28,6 +29,7 @@ interface PlaybackControlsProps {
   onBasemapStyleChange: (style: BasemapStyle) => void;
   onExaggerationChange: (val: number) => void;
   onOpenPrivacyTrim: () => void;
+  onExportGpx: () => void;
   onOpenExport: () => void;
   onReset: () => void;
 }
@@ -47,6 +49,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   onExaggerationChange,
   isTrimActive,
   onOpenPrivacyTrim,
+  onExportGpx,
   onOpenExport,
   onReset,
 }) => {
@@ -93,6 +96,16 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
         >
           <Shield className="w-4 h-4 text-amber-400" />
           <span className="hidden sm:inline">Privacy</span>
+        </button>
+
+        {/* Export GPX Button */}
+        <button
+          onClick={onExportGpx}
+          title="Download cleaned GPX track file"
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all active:scale-95 flex-shrink-0"
+        >
+          <FileDown className="w-4 h-4 text-sky-400" />
+          <span className="hidden sm:inline">GPX</span>
         </button>
 
         {/* Export Video Button */}

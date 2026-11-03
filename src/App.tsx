@@ -15,6 +15,7 @@ import { PlaybackControls } from './components/PlaybackControls';
 import { ExportModal } from './components/ExportModal';
 import { PrivacyTrimModal } from './components/PrivacyTrimModal';
 import { applyPrivacyTrim } from './services/privacyTrim';
+import { downloadGpx } from './services/gpxExporter';
 
 export const App: React.FC = () => {
   const [routeData, setRouteData] = useState<RouteProcessingResult | null>(null);
@@ -297,6 +298,7 @@ export const App: React.FC = () => {
               onBasemapStyleChange={setBasemapStyle}
               onExaggerationChange={setTerrainExaggeration}
               onOpenPrivacyTrim={() => setIsPrivacyModalOpen(true)}
+              onExportGpx={() => activeRoute && downloadGpx(activeRoute.points)}
               onOpenExport={() => {
                 setIsPlaying(false);
                 setIsExportModalOpen(true);

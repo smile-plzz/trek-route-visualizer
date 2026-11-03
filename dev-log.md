@@ -50,3 +50,11 @@
 - Wired Privacy Trim into `PlaybackControls.tsx` and `App.tsx` with memoized `activeRoute`.
 - Added unit tests in `src/services/privacyTrim.test.ts`.
 - Verification: 21 unit tests passed across 7 test suites; `npm run build` completed with zero errors.
+
+
+## [2026-11-04 01:59:00 +06:00] - Step 4: Clean GPX 1.1 Export
+- Implemented `buildGpxXml` and `downloadGpx` in `src/services/gpxExporter.ts` adhering to the official GPX 1.1 schema.
+- Added XML sanitization and embedded high-precision track coordinates, enriched elevations, and ISO timestamps.
+- Added unit tests in `src/services/gpxExporter.test.ts` including full roundtrip verification with `parseGpxString`.
+- Added **Export GPX** button in `PlaybackControls.tsx` for 1-click downloads.
+- Verification: 23 unit tests passed across 8 test suites; `npm run build` completed with zero errors.
