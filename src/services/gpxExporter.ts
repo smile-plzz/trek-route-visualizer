@@ -71,3 +71,4 @@ export function downloadGpx(
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+

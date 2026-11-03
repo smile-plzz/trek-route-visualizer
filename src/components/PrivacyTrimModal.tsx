@@ -141,3 +141,4 @@ export const PrivacyTrimModal: React.FC<PrivacyTrimModalProps> = ({
     </div>
   );
 };
+

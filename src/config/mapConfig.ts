@@ -45,3 +45,4 @@ export const DEFAULT_MAP_CONFIG: MapEngineConfig = {
     encoding: 'terrarium',
   },
 };
+

@@ -49,3 +49,4 @@ describe('gpxExporter', () => {
     expect(parsed[1].time).toBe(1723712400000);
   });
 });
+

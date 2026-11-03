@@ -59,3 +59,4 @@ describe('privacyTrim', () => {
     expect(result.stats.elevationGain).toBe(300);
   });
 });
+

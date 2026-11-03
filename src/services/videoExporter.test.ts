@@ -38,3 +38,4 @@ describe('videoExporter', () => {
     expect(['mp4', 'webm']).toContain(extension);
   });
 });
+

@@ -20,3 +20,4 @@ describe('exifParser', () => {
     expect(result.totalCount).toBe(1);
   });
 });
+
