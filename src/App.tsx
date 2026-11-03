@@ -124,7 +124,8 @@ export const App: React.FC = () => {
 
       // Spec rule: If GPX is supplied, it acts as the primary route track
       if (gpxFiles.length > 0) {
-        setProgressText(`Parsing GPX file: ${gpxFiles[0].name}...`);
+        const isMixed = photoFiles.length > 0;
+        setProgressText(`Parsing GPX file: ${gpxFiles[0].name}${isMixed ? ' (GPX takes priority over photos)' : ''}...`);
         const gpxText = await gpxFiles[0].text();
         const rawPoints = parseGpxString(gpxText, gpxFiles[0].name);
 
@@ -135,7 +136,7 @@ export const App: React.FC = () => {
         }
 
         setProgressText('Enriching route with AWS Terrarium 3D elevation...');
-        const result = await processRoutePoints(rawPoints, 'gpx');
+        const result = await processRoutePoints(rawPoints, isMixed ? 'mixed' : 'gpx');
         setRouteData(result);
         setProgress(0);
         setIsPlaying(true);

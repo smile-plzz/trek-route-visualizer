@@ -56,6 +56,16 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({ stats, sourceType })
         </div>
       )}
 
+      {sourceType === 'mixed' && (
+        <div className="flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-sky-500/30 backdrop-blur-md text-xs shadow-lg">
+          <div className="flex items-center gap-2 text-sky-300 font-medium">
+            <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
+            <span>Both GPX and photos detected: <strong>GPX track prioritized</strong> as route source</span>
+          </div>
+          <span className="text-slate-400 text-[11px]">Photos bypassed per MVP rule</span>
+        </div>
+      )}
+
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-slate-950/80 p-2 rounded-2xl border border-slate-800/80 backdrop-blur-xl shadow-2xl">
         {/* Total Distance */}

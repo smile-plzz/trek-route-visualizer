@@ -24,3 +24,11 @@
 - **Verification**:
   - `vitest`: 11 unit tests passed across 4 test suites (`geoUtils`, `terrariumService`, `gpxParser`, `routeProcessor`).
   - `npm run build`: Zero errors, clean production bundle created (`dist/`).
+
+
+## [2026-11-04 01:52:00 +06:00] - Step 1: Verification Pass & Config Polish
+- Externalized map tile URLs, maxzooms, and attributions into `src/config/mapConfig.ts`.
+- Refactored `Map3D.tsx` to read dynamic tile config with attribution visible for OpenStreetMap contributors, Carto, Esri, and AWS Open Data.
+- Added explicit user feedback in `TelemetryHUD` and `App.tsx` when both GPX and photos are supplied (GPX prioritization notice).
+- Added test coverage in `src/services/exifParser.test.ts` for non-geotagged and empty file sets.
+- Verification: 13 unit tests passed across 5 test suites; `npm run build` completed with zero errors.

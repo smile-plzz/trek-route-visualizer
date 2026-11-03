@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import maplibregl, { Map, LngLatBounds } from 'maplibre-gl';
 import { TrekPoint, CameraMode, BasemapStyle } from '../types';
 import { getFollowCameraBearing, lerpAngle } from '../services/geoUtils';
+import { DEFAULT_MAP_CONFIG } from '../config/mapConfig';
 
 interface Map3DProps {
   points: TrekPoint[];
@@ -11,19 +12,6 @@ interface Map3DProps {
   terrainExaggeration: number;
   onMapLoaded?: (mapInstance: Map) => void;
 }
-
-const TILE_SOURCES = {
-  standard: {
-    tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'],
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxzoom: 19,
-  },
-  satellite: {
-    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    maxzoom: 19,
-  },
-};
 
 export const Map3D: React.FC<Map3DProps> = ({
   points,
@@ -45,6 +33,9 @@ export const Map3D: React.FC<Map3DProps> = ({
     const initialCenter: [number, number] =
       points.length > 0 ? [points[0].lng, points[0].lat] : [7.7082, 45.9928];
 
+    const currentBasemap = DEFAULT_MAP_CONFIG.basemaps[basemapStyle];
+    const terrainConfig = DEFAULT_MAP_CONFIG.terrain;
+
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       preserveDrawingBuffer: true, // CRITICAL FOR VIDEO RECORDING
@@ -53,18 +44,18 @@ export const Map3D: React.FC<Map3DProps> = ({
         sources: {
           'basemap-source': {
             type: 'raster',
-            tiles: TILE_SOURCES[basemapStyle].tiles,
+            tiles: currentBasemap.tiles,
             tileSize: 256,
-            attribution: TILE_SOURCES[basemapStyle].attribution,
-            maxzoom: TILE_SOURCES[basemapStyle].maxzoom,
+            attribution: currentBasemap.attribution,
+            maxzoom: currentBasemap.maxzoom,
           },
           'terrarium-dem': {
             type: 'raster-dem',
-            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+            tiles: [terrainConfig.sourceUrl],
             tileSize: 256,
-            encoding: 'terrarium',
-            attribution: '&copy; AWS Open Data Terrain Tiles',
-            maxzoom: 14,
+            encoding: terrainConfig.encoding,
+            attribution: terrainConfig.attribution,
+            maxzoom: terrainConfig.maxzoom,
           },
         },
         layers: [
@@ -119,7 +110,7 @@ export const Map3D: React.FC<Map3DProps> = ({
 
     const source = map.getSource('basemap-source') as maplibregl.RasterTileSource;
     if (source && source.setTiles) {
-      source.setTiles(TILE_SOURCES[basemapStyle].tiles);
+      source.setTiles(DEFAULT_MAP_CONFIG.basemaps[basemapStyle].tiles);
     }
   }, [basemapStyle]);
 
