@@ -13,6 +13,8 @@ import { TelemetryHUD } from './components/TelemetryHUD';
 import { ElevationChart } from './components/ElevationChart';
 import { PlaybackControls } from './components/PlaybackControls';
 import { ExportModal } from './components/ExportModal';
+import { PrivacyTrimModal } from './components/PrivacyTrimModal';
+import { applyPrivacyTrim } from './services/privacyTrim';
 
 export const App: React.FC = () => {
   const [routeData, setRouteData] = useState<RouteProcessingResult | null>(null);
@@ -27,24 +29,50 @@ export const App: React.FC = () => {
   const [basemapStyle, setBasemapStyle] = useState<BasemapStyle>('satellite');
   const [terrainExaggeration, setTerrainExaggeration] = useState<number>(1.5);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
+  const [startTrimMeters, setStartTrimMeters] = useState<number>(0);
+  const [endTrimMeters, setEndTrimMeters] = useState<number>(0);
 
   const mapInstanceRef = useRef<Map | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
+  // Active Route (with Privacy Trim applied)
+  const activeRoute = useMemo(() => {
+    if (!routeData) return null;
+    if (startTrimMeters === 0 && endTrimMeters === 0) {
+      return {
+        points: routeData.points,
+        stats: routeData.stats,
+        sourceType: routeData.sourceType,
+      };
+    }
+    const { trimmedPoints, stats } = applyPrivacyTrim(
+      routeData.points,
+      routeData.stats,
+      startTrimMeters,
+      endTrimMeters
+    );
+    return {
+      points: trimmedPoints,
+      stats,
+      sourceType: routeData.sourceType,
+    };
+  }, [routeData, startTrimMeters, endTrimMeters]);
+
   // Computed Current Position & Traveler State
   const travelerPosition = useMemo(() => {
-    if (!routeData || routeData.points.length === 0) return null;
-    const totalDist = routeData.points[routeData.points.length - 1].distance || 1;
+    if (!activeRoute || activeRoute.points.length === 0) return null;
+    const totalDist = activeRoute.points[activeRoute.points.length - 1].distance || 1;
     const currentDist = progress * totalDist;
-    return interpolateAtDistance(routeData.points, currentDist);
-  }, [routeData, progress]);
+    return interpolateAtDistance(activeRoute.points, currentDist);
+  }, [activeRoute, progress]);
 
   const currentDistance = useMemo(() => {
-    if (!routeData || routeData.points.length === 0) return 0;
-    const totalDist = routeData.points[routeData.points.length - 1].distance || 0;
+    if (!activeRoute || activeRoute.points.length === 0) return 0;
+    const totalDist = activeRoute.points[activeRoute.points.length - 1].distance || 0;
     return progress * totalDist;
-  }, [routeData, progress]);
+  }, [activeRoute, progress]);
 
   // Animation Loop (Distance-constant velocity)
   useEffect(() => {
@@ -190,11 +218,11 @@ export const App: React.FC = () => {
 
   const handleScrubDistance = useCallback(
     (dist: number) => {
-      if (!routeData || routeData.points.length === 0) return;
-      const totalDist = routeData.points[routeData.points.length - 1].distance || 1;
+      if (!activeRoute || activeRoute.points.length === 0) return;
+      const totalDist = activeRoute.points[activeRoute.points.length - 1].distance || 1;
       setProgress(Math.max(0, Math.min(1, dist / totalDist)));
     },
-    [routeData]
+    [activeRoute]
   );
 
   // Reset to initial clean state
@@ -202,16 +230,19 @@ export const App: React.FC = () => {
     setIsPlaying(false);
     setRouteData(null);
     setProgress(0);
+    setStartTrimMeters(0);
+    setEndTrimMeters(0);
+    setIsPrivacyModalOpen(false);
     setIsExportModalOpen(false);
   }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans text-slate-100 flex flex-col">
       {/* 3D Map View (Underlay) */}
-      {routeData && (
+      {activeRoute && (
         <div className="absolute inset-0 z-0">
           <Map3D
-            points={routeData.points}
+            points={activeRoute.points}
             travelerPosition={travelerPosition}
             cameraMode={cameraMode}
             basemapStyle={basemapStyle}
@@ -224,7 +255,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Main UI Overlay */}
-      {!routeData ? (
+      {!activeRoute ? (
         /* State 1: Drop Zone / Landing Screen */
         <div className="relative z-10 flex-1 flex items-center justify-center p-4">
           <DropZone
@@ -240,13 +271,13 @@ export const App: React.FC = () => {
         <div className="relative z-10 flex flex-col justify-between h-full pointer-events-none p-4 md:p-6">
           {/* Top Row: Telemetry HUD */}
           <div className="flex flex-col items-center w-full pointer-events-auto">
-            <TelemetryHUD stats={routeData.stats} sourceType={routeData.sourceType} />
+            <TelemetryHUD stats={activeRoute.stats} sourceType={activeRoute.sourceType} />
           </div>
 
           {/* Bottom Row: Elevation Profile & Playback Controls */}
           <div className="flex flex-col items-center gap-3 w-full max-w-4xl mx-auto pointer-events-auto">
             <ElevationChart
-              points={routeData.points}
+              points={activeRoute.points}
               currentDistance={currentDistance}
               onScrubDistance={handleScrubDistance}
             />
@@ -258,12 +289,14 @@ export const App: React.FC = () => {
               cameraMode={cameraMode}
               basemapStyle={basemapStyle}
               terrainExaggeration={terrainExaggeration}
+              isTrimActive={startTrimMeters > 0 || endTrimMeters > 0}
               onTogglePlay={() => setIsPlaying(!isPlaying)}
               onScrubProgress={handleScrubProgress}
               onDurationChange={setPlaybackDurationSec}
               onCameraModeChange={setCameraMode}
               onBasemapStyleChange={setBasemapStyle}
               onExaggerationChange={setTerrainExaggeration}
+              onOpenPrivacyTrim={() => setIsPrivacyModalOpen(true)}
               onOpenExport={() => {
                 setIsPlaying(false);
                 setIsExportModalOpen(true);
@@ -274,14 +307,35 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Video Export Modal */}
+      {/* Privacy Trim Modal */}
       {routeData && (
+        <PrivacyTrimModal
+          isOpen={isPrivacyModalOpen}
+          onClose={() => setIsPrivacyModalOpen(false)}
+          totalDistance={routeData.points[routeData.points.length - 1]?.distance || 0}
+          startTrim={startTrimMeters}
+          endTrim={endTrimMeters}
+          onApplyTrim={(start, end) => {
+            setStartTrimMeters(start);
+            setEndTrimMeters(end);
+            setProgress(0);
+          }}
+          onResetTrim={() => {
+            setStartTrimMeters(0);
+            setEndTrimMeters(0);
+            setProgress(0);
+          }}
+        />
+      )}
+
+      {/* Video Export Modal */}
+      {activeRoute && (
         <ExportModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
           map={mapInstanceRef.current}
-          points={routeData.points}
-          stats={routeData.stats}
+          points={activeRoute.points}
+          stats={activeRoute.stats}
           currentCameraMode={cameraMode}
           onScrubDistance={handleScrubDistance}
         />

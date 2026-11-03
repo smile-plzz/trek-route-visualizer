@@ -41,3 +41,12 @@
 - Added aspect ratio selector buttons with icons in `ExportModal.tsx`.
 - Added unit tests in `src/services/videoExporter.test.ts`.
 - Verification: 17 unit tests passed across 6 test suites; `npm run build` completed with zero errors.
+
+
+## [2026-11-04 01:57:00 +06:00] - Step 3: Privacy Trim (Start/End Concealment)
+- Implemented `applyPrivacyTrim` in `src/services/privacyTrim.ts` to exclude coordinates within user-defined trailhead and campsite distances ($0$ to $2,000\text{m}$).
+- Recomputed cumulative distances starting from zero and recalculated elevation gain/loss with 4m hysteresis so trimmed waypoints are never rendered or exported.
+- Created `PrivacyTrimModal.tsx` with live interactive sliders for start and end trim.
+- Wired Privacy Trim into `PlaybackControls.tsx` and `App.tsx` with memoized `activeRoute`.
+- Added unit tests in `src/services/privacyTrim.test.ts`.
+- Verification: 21 unit tests passed across 7 test suites; `npm run build` completed with zero errors.

@@ -9,6 +9,7 @@ import {
   Map as MapIcon,
   Layers,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 import { CameraMode, BasemapStyle } from '../types';
 
@@ -19,12 +20,14 @@ interface PlaybackControlsProps {
   cameraMode: CameraMode;
   basemapStyle: BasemapStyle;
   terrainExaggeration: number;
+  isTrimActive?: boolean;
   onTogglePlay: () => void;
   onScrubProgress: (progress: number) => void;
   onDurationChange: (sec: number) => void;
   onCameraModeChange: (mode: CameraMode) => void;
   onBasemapStyleChange: (style: BasemapStyle) => void;
   onExaggerationChange: (val: number) => void;
+  onOpenPrivacyTrim: () => void;
   onOpenExport: () => void;
   onReset: () => void;
 }
@@ -42,6 +45,8 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   onCameraModeChange,
   onBasemapStyleChange,
   onExaggerationChange,
+  isTrimActive,
+  onOpenPrivacyTrim,
   onOpenExport,
   onReset,
 }) => {
@@ -75,6 +80,20 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             <span>{durationSec}s</span>
           </div>
         </div>
+
+        {/* Privacy Trim Button */}
+        <button
+          onClick={onOpenPrivacyTrim}
+          title="Conceal start/end coordinates"
+          className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-95 flex-shrink-0 ${
+            isTrimActive
+              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/10'
+              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Shield className="w-4 h-4 text-amber-400" />
+          <span className="hidden sm:inline">Privacy</span>
+        </button>
 
         {/* Export Video Button */}
         <button
