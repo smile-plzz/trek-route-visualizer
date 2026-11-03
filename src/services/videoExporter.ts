@@ -5,10 +5,15 @@ import { interpolateAtDistance } from './geoUtils';
 export type VideoAspectRatio = '16:9' | '9:16' | '1:1';
 
 export interface VideoExportOptions {
-  durationSec: number; // 10, 20, 30, 60
+  durationSec: number; // 5 to 180 seconds
+  fps: 30 | 60;
   resolution: '720p' | '1080p';
   aspectRatio: VideoAspectRatio;
   cameraMode: CameraMode;
+  showTelemetryHud?: boolean;
+  showElevationProfile?: boolean;
+  showWatermark?: boolean;
+  showProgressBar?: boolean;
   onProgress: (percent: number, elapsedSec: number) => void;
 }
 
@@ -80,128 +85,197 @@ export function drawTelemetryOverlay(
   currentElevation: number,
   stats: TrekStats,
   progress: number,
-  aspectRatio: VideoAspectRatio
+  aspectRatio: VideoAspectRatio,
+  points?: TrekPoint[],
+  layerOptions?: {
+    showTelemetryHud?: boolean;
+    showElevationProfile?: boolean;
+    showWatermark?: boolean;
+    showProgressBar?: boolean;
+  }
 ) {
   ctx.save();
 
   const isPortrait = aspectRatio === '9:16';
   const isSquare = aspectRatio === '1:1';
+  const showTelemetry = layerOptions?.showTelemetryHud !== false;
+  const showWatermark = layerOptions?.showWatermark !== false;
+  const showProgress = layerOptions?.showProgressBar !== false;
+  const showProfile = layerOptions?.showElevationProfile !== false;
 
-  // 1. Top Brand Pill
-  const pillPadding = isPortrait ? 40 : 30;
-  const pillWidth = isPortrait ? 320 : 260;
-  const pillHeight = isPortrait ? 52 : 44;
+  // 1. Top Brand Pill (Apple Minimalist style)
+  if (showWatermark) {
+    const pillPadding = isPortrait ? 40 : 30;
+    const pillWidth = isPortrait ? 310 : 250;
+    const pillHeight = isPortrait ? 50 : 42;
 
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(pillPadding, pillPadding, pillWidth, pillHeight, isPortrait ? 18 : 14);
-  ctx.fill();
-  ctx.stroke();
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.75)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(pillPadding, pillPadding, pillWidth, pillHeight, isPortrait ? 18 : 14);
+    ctx.fill();
+    ctx.stroke();
 
-  // Blue dot logo
-  ctx.fillStyle = '#38bdf8';
-  ctx.beginPath();
-  ctx.arc(pillPadding + (isPortrait ? 26 : 22), pillPadding + pillHeight / 2, isPortrait ? 10 : 8, 0, Math.PI * 2);
-  ctx.fill();
+    // Cyan accent dot
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(
+      pillPadding + (isPortrait ? 24 : 20),
+      pillPadding + pillHeight / 2,
+      isPortrait ? 8 : 7,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${isPortrait ? 20 : 16}px "Plus Jakarta Sans", sans-serif`;
-  ctx.fillText('Trek Route Visualizer', pillPadding + (isPortrait ? 48 : 42), pillPadding + pillHeight / 2 + (isPortrait ? 7 : 5));
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${isPortrait ? 18 : 15}px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`;
+    ctx.fillText(
+      'Trek Route Visualizer',
+      pillPadding + (isPortrait ? 44 : 38),
+      pillPadding + pillHeight / 2 + (isPortrait ? 6 : 5)
+    );
+  }
 
   // 2. Metrics Overlay Banner (Layout adapts to aspect ratio)
   const distKm = (currentDist / 1000).toFixed(2);
   const totalKm = (totalDist / 1000).toFixed(2);
 
-  if (isPortrait) {
-    // 9:16 Portrait: Stacked 2x2 cards near bottom for mobile screens
-    const cardWidth = width - 80;
-    const cardHeight = 150;
-    const cardX = 40;
-    const cardY = height - cardHeight - 70;
+  if (showTelemetry) {
+    if (isPortrait) {
+      // 9:16 Portrait: Stacked 2x2 cards near bottom for mobile screens
+      const cardWidth = width - 80;
+      const cardHeight = 150;
+      const cardX = 40;
+      const cardY = height - cardHeight - 70;
 
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.strokeStyle = 'rgba(51, 65, 85, 0.85)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardWidth, cardHeight, 24);
-    ctx.fill();
-    ctx.stroke();
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.82)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(cardX, cardY, cardWidth, cardHeight, 24);
+      ctx.fill();
+      ctx.stroke();
 
-    // Row 1: Distance (Left) & Elevation (Right)
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('DISTANCE', cardX + 30, cardY + 38);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 28px "JetBrains Mono", monospace';
-    ctx.fillText(`${distKm} / ${totalKm} km`, cardX + 30, cardY + 74);
+      // Row 1: Distance (Left) & Elevation (Right)
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 14px -apple-system, sans-serif';
+      ctx.fillText('DISTANCE', cardX + 30, cardY + 38);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px "JetBrains Mono", monospace';
+      ctx.fillText(`${distKm} / ${totalKm} km`, cardX + 30, cardY + 74);
 
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('ELEVATION', cardX + cardWidth / 2 + 20, cardY + 38);
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 28px "JetBrains Mono", monospace';
-    ctx.fillText(`${Math.round(currentElevation)} m`, cardX + cardWidth / 2 + 20, cardY + 74);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 14px -apple-system, sans-serif';
+      ctx.fillText('ELEVATION', cardX + cardWidth / 2 + 20, cardY + 38);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 28px "JetBrains Mono", monospace';
+      ctx.fillText(`${Math.round(currentElevation)} m`, cardX + cardWidth / 2 + 20, cardY + 74);
 
-    // Row 2: Elevation Gain
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('ELEVATION GAIN', cardX + 30, cardY + 115);
-    ctx.fillStyle = '#10b981';
-    ctx.font = 'bold 26px "JetBrains Mono", monospace';
-    ctx.fillText(`+${stats.elevationGain} m`, cardX + 180, cardY + 116);
+      // Row 2: Elevation Gain
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 14px -apple-system, sans-serif';
+      ctx.fillText('ELEVATION GAIN', cardX + 30, cardY + 115);
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 26px "JetBrains Mono", monospace';
+      ctx.fillText(`+${stats.elevationGain} m`, cardX + 180, cardY + 116);
+    } else {
+      // 16:9 Landscape or 1:1 Square: Horizontal 3-column banner
+      const bannerWidth = isSquare ? width - 80 : Math.min(width - 60, 720);
+      const bannerHeight = 84;
+      const bannerX = (width - bannerWidth) / 2;
+      const bannerY = height - bannerHeight - 35;
 
-  } else {
-    // 16:9 Landscape or 1:1 Square: Horizontal 3-column banner
-    const bannerWidth = isSquare ? width - 80 : Math.min(width - 60, 720);
-    const bannerHeight = 84;
-    const bannerX = (width - bannerWidth) / 2;
-    const bannerY = height - bannerHeight - 35;
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.8)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 20);
+      ctx.fill();
+      ctx.stroke();
 
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-    ctx.strokeStyle = 'rgba(51, 65, 85, 0.8)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 18);
-    ctx.fill();
-    ctx.stroke();
+      const colStep = bannerWidth / 3;
 
-    const colStep = bannerWidth / 3;
+      // Col 1: Distance
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      ctx.fillText('DISTANCE', bannerX + 24, bannerY + 28);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px "JetBrains Mono", monospace';
+      ctx.fillText(`${distKm} / ${totalKm} km`, bannerX + 24, bannerY + 58);
 
-    // Col 1: Distance
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('DISTANCE', bannerX + 24, bannerY + 28);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "JetBrains Mono", monospace';
-    ctx.fillText(`${distKm} / ${totalKm} km`, bannerX + 24, bannerY + 58);
+      // Col 2: Elevation
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      ctx.fillText('ELEVATION', bannerX + colStep + 10, bannerY + 28);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 22px "JetBrains Mono", monospace';
+      ctx.fillText(`${Math.round(currentElevation)} m`, bannerX + colStep + 10, bannerY + 58);
 
-    // Col 2: Elevation
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('ELEVATION', bannerX + colStep + 10, bannerY + 28);
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 22px "JetBrains Mono", monospace';
-    ctx.fillText(`${Math.round(currentElevation)} m`, bannerX + colStep + 10, bannerY + 58);
-
-    // Col 3: Gain
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('ELEVATION GAIN', bannerX + colStep * 2 + 10, bannerY + 28);
-    ctx.fillStyle = '#10b981';
-    ctx.font = 'bold 22px "JetBrains Mono", monospace';
-    ctx.fillText(`+${stats.elevationGain} m`, bannerX + colStep * 2 + 10, bannerY + 58);
+      // Col 3: Gain
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      ctx.fillText('ELEVATION GAIN', bannerX + colStep * 2 + 10, bannerY + 28);
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 22px "JetBrains Mono", monospace';
+      ctx.fillText(`+${stats.elevationGain} m`, bannerX + colStep * 2 + 10, bannerY + 58);
+    }
   }
 
-  // 3. Bottom Progress Bar
-  const barHeight = isPortrait ? 10 : 6;
-  const barY = height - (isPortrait ? 18 : 12);
-  ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
-  ctx.fillRect(0, barY, width, barHeight);
+  // 3. Mini Elevation Profile Sparkline (Optional overlay on video)
+  if (showProfile && points && points.length > 2) {
+    const profWidth = isPortrait ? 280 : 220;
+    const profHeight = isPortrait ? 52 : 42;
+    const profX = width - profWidth - (isPortrait ? 40 : 30);
+    const profY = isPortrait ? 40 : 30;
 
-  ctx.fillStyle = '#38bdf8';
-  ctx.fillRect(0, barY, width * progress, barHeight);
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.75)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(profX, profY, profWidth, profHeight, 14);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw sparkline
+    const pad = 8;
+    const innerW = profWidth - pad * 2;
+    const innerH = profHeight - pad * 2;
+    const minEle = stats.lowestElevation || 0;
+    const maxEle = Math.max(stats.highestElevation, minEle + 10);
+    const eleRange = maxEle - minEle || 1;
+
+    ctx.beginPath();
+    for (let i = 0; i < points.length; i++) {
+      const px = profX + pad + (points[i].distance / (totalDist || 1)) * innerW;
+      const py = profY + profHeight - pad - ((points[i].elevation - minEle) / eleRange) * innerH;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw active cursor dot
+    const curX = profX + pad + progress * innerW;
+    const curY = profY + profHeight - pad - ((currentElevation - minEle) / eleRange) * innerH;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(curX, curY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 4. Bottom Progress Bar
+  if (showProgress) {
+    const barHeight = isPortrait ? 8 : 5;
+    const barY = height - (isPortrait ? 16 : 10);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.fillRect(0, barY, width, barHeight);
+
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect(0, barY, width * progress, barHeight);
+  }
 
   ctx.restore();
 }
@@ -232,11 +306,12 @@ export async function recordTrekVideo(
     throw new Error('Could not create 2D canvas context for export');
   }
 
+  const fps = options.fps || 30;
   const { mimeType } = getSupportedMimeType();
-  const stream = exportCanvas.captureStream(30); // 30 FPS recording stream
+  const stream = exportCanvas.captureStream(fps);
   const recorder = new MediaRecorder(stream, {
     mimeType,
-    videoBitsPerSecond: options.resolution === '1080p' ? 8_000_000 : 4_000_000,
+    videoBitsPerSecond: options.resolution === '1080p' ? 9_000_000 : 4_500_000,
   });
 
   const recordedChunks: Blob[] = [];
@@ -256,8 +331,7 @@ export async function recordTrekVideo(
 
   recorder.start();
 
-  const fps = 30;
-  const totalFrames = options.durationSec * fps;
+  const totalFrames = Math.max(1, Math.round(options.durationSec * fps));
   const frameIntervalMs = 1000 / fps;
 
   // Render Loop
@@ -269,8 +343,8 @@ export async function recordTrekVideo(
     // Update map scrubber & traveler
     setScrubDistance(currentDist);
 
-    // Wait a brief tick for MapLibre to update and flush WebGL buffer
-    await new Promise((r) => setTimeout(r, Math.max(16, frameIntervalMs / 2)));
+    // Wait for MapLibre to update and flush WebGL buffer
+    await new Promise((r) => setTimeout(r, Math.max(14, frameIntervalMs / 2)));
 
     // Calculate center-crop mapping from map canvas to export canvas
     const mapW = mapCanvas.width;
@@ -294,7 +368,14 @@ export async function recordTrekVideo(
       curPos.elevation,
       stats,
       progress,
-      options.aspectRatio
+      options.aspectRatio,
+      points,
+      {
+        showTelemetryHud: options.showTelemetryHud,
+        showElevationProfile: options.showElevationProfile,
+        showWatermark: options.showWatermark,
+        showProgressBar: options.showProgressBar,
+      }
     );
 
     const percent = Math.min(100, Math.round(progress * 100));

@@ -5,6 +5,29 @@ All notable changes to the **Trek Route Visualizer** will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-04
+### Added
+- **Waypoint & Photo Selection Drawer (`WaypointDrawer.tsx`)**:
+  - Slide-over inspector to individually view, search, and toggle any photo or waypoint on/off.
+  - "Merge Burst Shots (<1m)" toggle vs "Keep All Geotagged Photos", clarifying photo count transparency.
+  - Bulk actions (*Select All*, *Deselect All*, *Invert Selection*).
+  - Crosshair button to fly the 3D camera to any waypoint coordinate.
+  - Zero-latency in-memory distance and elevation recalculations.
+- **Granular Video Duration & Editability (`ExportModal.tsx`)**:
+  - Video animation duration slider and numeric input from $5\text{s}$ up to $180\text{s}$ (3 minutes).
+  - Quick duration presets: *15s (Quick)*, *30s (Social)*, *60s (Standard)*, *90s (Relaxed)*, *120s (Slow Pan)*, *180s (Cinematic)*.
+  - Frame rate toggle: $30\text{ FPS}$ vs $60\text{ FPS}$ (Ultra Smooth).
+  - Layer visibility switches: Telemetry HUD, Elevation Profile Sparkline, App Brand Pill, Progress Bar.
+- **3D Map Appearance & Atmospheric Customization (`MapAppearanceModal.tsx` & `mapThemes.ts`)**:
+  - 4 Basemap Themes: *High-Res Satellite*, *Apple Minimal Dark*, *Alpine Topo & Contours*, and *Warm Clay Minimal*.
+  - 4 Sun & Shadow Lighting Presets: *Golden Hour Sunset*, *Alpine Morning Dawn*, *High Noon Clear Sky*, and *Midnight Neon Glow*.
+  - 5 Trail Color Accents: *Apple Orange*, *Alpine Cyan*, *Trail Lime*, *Hot Coral*, and *Deep Violet*.
+  - Dynamic line width slider ($2\text{px}$ to $8\text{px}$) with live preview.
+  - Waypoint dot density selector (*All Dots*, *Start & End Only*, *Hide Dots*).
+- **Apple Minimalist UI Redesign**:
+  - Floating bottom glassmorphic dock for playback and tools (`PlaybackControls.tsx`).
+  - Redesigned Apple Fitness/Health telemetry cards with collapsible compact mode (`TelemetryHUD.tsx`).
+
 ## [1.0.0] - 2026-11-04
 ### Added
 - **Multi-Aspect Video Export**:

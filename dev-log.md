@@ -78,3 +78,30 @@
 - **Verification**:
   - Added real binary TIFF GPS header parsing unit test in `src/services/exifParser.test.ts`.
   - 26 unit tests passed; `npm run build` completed with zero errors.
+
+
+## [2026-11-04 03:25:00 +06:00] - Apple Minimalist Aesthetic, Waypoint Manager & Advanced 3D Map Customization
+- **Waypoint & Photo Selection Manager**:
+  - Addressed user feedback regarding photo count discrepancy when importing large photo sets (e.g. 180 photos vs 130 imported). Previously, burst photos $<1\text{m}$ apart were unconditionally merged.
+  - Added toggle in `WaypointDrawer`: *"Merge Burst Shots (<1m)"* vs *"Keep All Geotagged Photos"*.
+  - Built `WaypointDrawer.tsx`: Apple-style frosted slide-over drawer with search filter, bulk actions (*Select All*, *Deselect All*, *Invert*), and individual waypoint toggles with timestamp, elevation, distance along trail, and 3D crosshair fly-to.
+  - Built `recalculateTrekRoute` in `routeProcessor.ts` for instantaneous, zero-latency in-memory distance and elevation recalculations upon waypoint toggling without re-fetching DEM tiles.
+- **Granular Video Duration & Editability**:
+  - Extended `videoExporter.ts` and `ExportModal.tsx`:
+    - Video duration now freely editable from $5\text{s}$ up to $180\text{s}$ (3 minutes) with direct numeric input and quick presets (15s, 30s, 60s, 90s, 120s, 180s).
+    - Added $30\text{ FPS}$ vs $60\text{ FPS}$ frame rate selector for ultra-smooth 3D flight paths.
+    - Added granular HUD layer visibility toggles: Live Telemetry Banner, Mini Elevation Profile Sparkline, App Brand Pill, and Bottom Progress Bar.
+- **3D Map Themes, Atmospheric Lighting & Trail Customization**:
+  - Created `src/config/mapThemes.ts`:
+    - 4 Basemap Themes: *High-Res Satellite* (Esri), *Apple Minimal Dark* (Carto Dark Matter), *Alpine Topo & Contours* (OpenTopoMap), and *Warm Clay Minimal* (Carto Light).
+    - 4 Atmospheric Sun & Shadow Angles: *Golden Hour Sunset* ($285^\circ$ azimuth, $18^\circ$ altitude, amber fog), *Alpine Morning Dawn* ($85^\circ$ azimuth, $22^\circ$ altitude, rose haze), *High Noon Clear Sky* ($180^\circ$ azimuth, $72^\circ$ altitude), and *Midnight Neon Glow* ($0^\circ$ azimuth, deep indigo).
+    - 5 Trail Accent Colors: *Apple Orange* (`#ff9500`), *Alpine Cyan* (`#00e5ff`), *Trail Lime* (`#30d158`), *Hot Coral* (`#ff375f`), and *Deep Violet* (`#bf5af2`).
+    - Dynamic Trail Line Width slider ($2\text{px}$ to $8\text{px}$) with live preview strip.
+    - Waypoint Dot Density selector (*All Dots*, *Start & End Only*, *Hide Dots*).
+  - Built `MapAppearanceModal.tsx` and refactored `Map3D.tsx` to dynamically update basemap raster tiles, `map.setSky()` atmosphere, line colors, line glow, and waypoint filters.
+- **Apple Minimalist UI Redesign**:
+  - Restyled `PlaybackControls.tsx` into a floating bottom glassmorphic dock (`bg-slate-950/70 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl`).
+  - Restyled `TelemetryHUD.tsx` with Apple Fitness / Health card design, crisp tabular numerals, and collapsible compact mode for distraction-free 3D cartography.
+- **Verification**:
+  - Created unit tests in `src/config/mapThemes.test.ts`.
+  - 31 unit tests passed across 10 test suites; `npm run build` succeeded with zero TypeScript errors.

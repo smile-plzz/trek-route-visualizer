@@ -1,25 +1,35 @@
 import React, { useEffect, useRef } from 'react';
 import maplibregl, { Map, LngLatBounds } from 'maplibre-gl';
-import { TrekPoint, CameraMode, BasemapStyle } from '../types';
+import { TrekPoint, CameraMode, BasemapStyle, MapAppearanceSettings } from '../types';
 import { getFollowCameraBearing, lerpAngle } from '../services/geoUtils';
 import { DEFAULT_MAP_CONFIG } from '../config/mapConfig';
+import {
+  MAP_THEMES,
+  SUN_LIGHTING_MODES,
+  TRAIL_COLORS,
+  DEFAULT_APPEARANCE_SETTINGS,
+} from '../config/mapThemes';
 
 interface Map3DProps {
   points: TrekPoint[];
   travelerPosition: { lat: number; lng: number; elevation: number } | null;
   cameraMode: CameraMode;
-  basemapStyle: BasemapStyle;
+  basemapStyle?: BasemapStyle;
+  appearanceSettings?: MapAppearanceSettings;
   terrainExaggeration: number;
   onMapLoaded?: (mapInstance: Map) => void;
+  flyToCoord?: { lat: number; lng: number; zoom?: number } | null;
 }
 
 export const Map3D: React.FC<Map3DProps> = ({
   points,
   travelerPosition,
   cameraMode,
-  basemapStyle,
+  basemapStyle = 'satellite',
+  appearanceSettings = DEFAULT_APPEARANCE_SETTINGS,
   terrainExaggeration,
   onMapLoaded,
+  flyToCoord,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
@@ -33,8 +43,12 @@ export const Map3D: React.FC<Map3DProps> = ({
     const initialCenter: [number, number] =
       points.length > 0 ? [points[0].lng, points[0].lat] : [7.7082, 45.9928];
 
-    const currentBasemap = DEFAULT_MAP_CONFIG.basemaps[basemapStyle];
+    // Priority to appearanceSettings.theme if available
+    const themeDef = MAP_THEMES[appearanceSettings.theme] || MAP_THEMES.satellite;
+    const tiles = themeDef.tiles;
+    const attribution = themeDef.attribution;
     const terrainConfig = DEFAULT_MAP_CONFIG.terrain;
+    const lighting = SUN_LIGHTING_MODES[appearanceSettings.lighting] || SUN_LIGHTING_MODES['golden-hour'];
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -44,10 +58,10 @@ export const Map3D: React.FC<Map3DProps> = ({
         sources: {
           'basemap-source': {
             type: 'raster',
-            tiles: currentBasemap.tiles,
+            tiles,
             tileSize: 256,
-            attribution: currentBasemap.attribution,
-            maxzoom: currentBasemap.maxzoom,
+            attribution,
+            maxzoom: themeDef.maxzoom,
           },
           'terrarium-dem': {
             type: 'raster-dem',
@@ -72,11 +86,11 @@ export const Map3D: React.FC<Map3DProps> = ({
           exaggeration: terrainExaggeration,
         },
         sky: {
-          'sky-color': '#0f172a',
-          'sky-horizon-blend': 0.6,
-          'horizon-color': '#1e293b',
+          'sky-color': lighting.skyColor,
+          'sky-horizon-blend': lighting.horizonBlend,
+          'horizon-color': lighting.horizonColor,
           'horizon-fog-blend': 0.7,
-          'fog-color': '#334155',
+          'fog-color': lighting.fogColor,
           'fog-ground-blend': 0.5,
         },
       },
@@ -94,7 +108,7 @@ export const Map3D: React.FC<Map3DProps> = ({
       isMapLoadedRef.current = true;
       mapRef.current = map;
       onMapLoaded?.(map);
-      setupRouteLayers(map, points);
+      setupRouteLayers(map, points, appearanceSettings);
     });
 
     return () => {
@@ -103,16 +117,71 @@ export const Map3D: React.FC<Map3DProps> = ({
     };
   }, []);
 
-  // Update Basemap Style
+  // Update Basemap Tiles on theme change
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoadedRef.current) return;
 
+    const themeDef = MAP_THEMES[appearanceSettings.theme];
+    if (!themeDef) return;
+
     const source = map.getSource('basemap-source') as maplibregl.RasterTileSource;
     if (source && source.setTiles) {
-      source.setTiles(DEFAULT_MAP_CONFIG.basemaps[basemapStyle].tiles);
+      source.setTiles(themeDef.tiles);
     }
-  }, [basemapStyle]);
+  }, [appearanceSettings.theme]);
+
+  // Update Lighting / Sky Atmosphere
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoadedRef.current) return;
+
+    const lighting = SUN_LIGHTING_MODES[appearanceSettings.lighting];
+    if (!lighting || typeof map.setSky !== 'function') return;
+
+    try {
+      map.setSky({
+        'sky-color': lighting.skyColor,
+        'sky-horizon-blend': lighting.horizonBlend,
+        'horizon-color': lighting.horizonColor,
+        'horizon-fog-blend': 0.7,
+        'fog-color': lighting.fogColor,
+        'fog-ground-blend': 0.5,
+      });
+    } catch (e) {
+      console.warn('Could not dynamically update sky:', e);
+    }
+  }, [appearanceSettings.lighting]);
+
+  // Update Trail Colors & Width
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoadedRef.current) return;
+
+    const trailDef = TRAIL_COLORS[appearanceSettings.trailColor] || TRAIL_COLORS['alpine-cyan'];
+
+    if (map.getLayer('route-line')) {
+      map.setPaintProperty('route-line', 'line-color', trailDef.hex);
+      map.setPaintProperty('route-line', 'line-width', appearanceSettings.lineWidth);
+    }
+    if (map.getLayer('route-glow')) {
+      map.setPaintProperty('route-glow', 'line-color', trailDef.glowHex);
+      map.setPaintProperty('route-glow', 'line-width', appearanceSettings.lineWidth * 2.2);
+    }
+
+    // Update waypoint density filter
+    if (map.getLayer('waypoints-layer')) {
+      if (appearanceSettings.waypointDensity === 'none') {
+        map.setLayoutProperty('waypoints-layer', 'visibility', 'none');
+      } else if (appearanceSettings.waypointDensity === 'turns') {
+        map.setLayoutProperty('waypoints-layer', 'visibility', 'visible');
+        map.setFilter('waypoints-layer', ['any', ['get', 'isStart'], ['get', 'isEnd']]);
+      } else {
+        map.setLayoutProperty('waypoints-layer', 'visibility', 'visible');
+        map.setFilter('waypoints-layer', null);
+      }
+    }
+  }, [appearanceSettings.trailColor, appearanceSettings.lineWidth, appearanceSettings.waypointDensity]);
 
   // Update Terrain Exaggeration
   useEffect(() => {
@@ -124,11 +193,30 @@ export const Map3D: React.FC<Map3DProps> = ({
     });
   }, [terrainExaggeration]);
 
+  // Handle external fly-to waypoint triggers
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoadedRef.current || !flyToCoord) return;
+    map.flyTo({
+      center: [flyToCoord.lng, flyToCoord.lat],
+      zoom: flyToCoord.zoom || 15.5,
+      pitch: 65,
+      bearing: map.getBearing(),
+      duration: 1400,
+      essential: true,
+    });
+  }, [flyToCoord]);
+
   // Helper to configure Route, Waypoints, and Traveler on the map
-  const setupRouteLayers = (map: Map, pts: TrekPoint[]) => {
+  const setupRouteLayers = (
+    map: Map,
+    pts: TrekPoint[],
+    currAppearance: MapAppearanceSettings
+  ) => {
     if (pts.length < 2) return;
 
     const coordinates = pts.map((p) => [p.lng, p.lat]);
+    const trailDef = TRAIL_COLORS[currAppearance.trailColor] || TRAIL_COLORS['alpine-cyan'];
 
     // 1. Route Line Source & Layer
     const routeGeoJson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
@@ -163,9 +251,9 @@ export const Map3D: React.FC<Map3DProps> = ({
           'line-cap': 'round',
         },
         paint: {
-          'line-color': '#38bdf8',
-          'line-width': 9,
-          'line-opacity': 0.45,
+          'line-color': trailDef.glowHex,
+          'line-width': currAppearance.lineWidth * 2.2,
+          'line-opacity': 0.5,
           'line-blur': 4,
         },
       });
@@ -180,14 +268,14 @@ export const Map3D: React.FC<Map3DProps> = ({
           'line-cap': 'round',
         },
         paint: {
-          'line-color': '#0284c7',
-          'line-width': 4.5,
-          'line-opacity': 0.95,
+          'line-color': trailDef.hex,
+          'line-width': currAppearance.lineWidth,
+          'line-opacity': 0.98,
         },
       });
     }
 
-    // 2. Waypoint Dots (Small Blue Dots at every coordinate)
+    // 2. Waypoint Dots (Small Dots at every coordinate)
     const waypointsGeoJson: GeoJSON.FeatureCollection<GeoJSON.Point> = {
       type: 'FeatureCollection',
       features: pts.map((p, index) => ({
@@ -222,9 +310,9 @@ export const Map3D: React.FC<Map3DProps> = ({
           'circle-radius': [
             'case',
             ['boolean', ['get', 'isStart'], false],
-            7,
+            7.5,
             ['boolean', ['get', 'isEnd'], false],
-            7,
+            7.5,
             4.5,
           ],
           'circle-color': [
@@ -233,11 +321,11 @@ export const Map3D: React.FC<Map3DProps> = ({
             '#10b981', // emerald for start
             ['boolean', ['get', 'isEnd'], false],
             '#f43f5e', // rose for end
-            '#0ea5e9', // vivid sky blue for route dots
+            trailDef.hex,
           ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff',
-          'circle-opacity': 0.9,
+          'circle-opacity': 0.92,
         },
       });
     }
@@ -272,11 +360,11 @@ export const Map3D: React.FC<Map3DProps> = ({
         type: 'circle',
         source: 'traveler-source',
         paint: {
-          'circle-radius': 14,
-          'circle-color': '#38bdf8',
+          'circle-radius': 15,
+          'circle-color': trailDef.glowHex,
           'circle-opacity': 0.35,
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#bae6fd',
+          'circle-stroke-color': '#ffffff',
         },
       });
 
@@ -287,7 +375,7 @@ export const Map3D: React.FC<Map3DProps> = ({
         source: 'traveler-source',
         paint: {
           'circle-radius': 8,
-          'circle-color': '#0284c7',
+          'circle-color': trailDef.hex,
           'circle-stroke-width': 3,
           'circle-stroke-color': '#ffffff',
         },
@@ -313,7 +401,7 @@ export const Map3D: React.FC<Map3DProps> = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoadedRef.current) return;
-    setupRouteLayers(map, points);
+    setupRouteLayers(map, points, appearanceSettings);
   }, [points]);
 
   // Update Traveler position & Follow Camera
@@ -341,9 +429,7 @@ export const Map3D: React.FC<Map3DProps> = ({
 
     // Update Follow Camera
     if (cameraMode === 'follow') {
-      // Find distance of traveler along points
       const targetBearing = getFollowCameraBearing(points, travelerPosition.elevation);
-      // Smooth bearing rotation
       currentBearingRef.current = lerpAngle(currentBearingRef.current, targetBearing, 0.12);
 
       map.easeTo({
@@ -364,8 +450,7 @@ export const Map3D: React.FC<Map3DProps> = ({
 
   return (
     <div className="relative w-full h-full">
-      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full bg-slate-900" />
+      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full bg-slate-950" />
     </div>
   );
 };
-

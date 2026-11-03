@@ -1,4 +1,5 @@
 export interface RawPoint {
+  id?: string;
   lat: number;
   lng: number;
   time?: number; // epoch ms
@@ -7,6 +8,7 @@ export interface RawPoint {
 }
 
 export interface TrekPoint {
+  id?: string;
   lat: number;
   lng: number;
   time?: number; // epoch ms
@@ -31,9 +33,27 @@ export interface TrekStats {
 export type CameraMode = 'follow' | 'overview';
 export type BasemapStyle = 'standard' | 'satellite';
 
+export type MapThemeId = 'apple-dark' | 'satellite' | 'topo' | 'clay';
+export type SunLightingId = 'golden-hour' | 'alpine-morning' | 'high-noon' | 'midnight-glow';
+export type TrailColorId = 'apple-orange' | 'alpine-cyan' | 'trail-lime' | 'hot-coral' | 'deep-violet';
+export type WaypointDensity = 'all' | 'turns' | 'none';
+
+export interface MapAppearanceSettings {
+  theme: MapThemeId;
+  lighting: SunLightingId;
+  trailColor: TrailColorId;
+  lineWidth: number; // 2 to 8
+  waypointDensity: WaypointDensity;
+}
+
+export interface RouteProcessingOptions {
+  mergeDuplicates?: boolean;
+  excludedIds?: Set<string>;
+}
+
 export interface RouteProcessingResult {
   points: TrekPoint[];
+  allWaypoints: TrekPoint[]; // full unexcluded pool for waypoint manager
   stats: TrekStats;
   sourceType: 'photos' | 'gpx' | 'mixed' | 'sample';
 }
-

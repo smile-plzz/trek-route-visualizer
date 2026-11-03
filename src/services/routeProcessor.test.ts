@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { processRoutePoints } from './routeProcessor';
-import { RawPoint } from '../types';
+import { processRoutePoints, recalculateTrekRoute } from './routeProcessor';
+import { RawPoint, TrekPoint } from '../types';
 
 describe('routeProcessor', () => {
   it('sorts photo points by timestamp', async () => {
@@ -29,7 +29,7 @@ describe('routeProcessor', () => {
     expect(result.points[2].name).toBe('IMG_10.jpg');
   });
 
-  it('merges points closer than 1 meter', async () => {
+  it('keeps all photos by default and merges points closer than 1 meter when mergeDuplicates is true', async () => {
     const raw: RawPoint[] = [
       { lat: 46.000000, lng: 7.000000, time: 1000, gpsAltitude: 1000 },
       // Approx 0.05m away
@@ -38,16 +38,16 @@ describe('routeProcessor', () => {
       { lat: 46.001000, lng: 7.000000, time: 2000, gpsAltitude: 1050 },
     ];
 
-    const result = await processRoutePoints(raw, 'photos');
-    expect(result.points.length).toBe(2);
+    // Default keeps all geotagged photos
+    const allResult = await processRoutePoints(raw, 'photos');
+    expect(allResult.points.length).toBe(3);
+
+    // With mergeDuplicates: true
+    const mergedResult = await processRoutePoints(raw, 'photos', raw.length, 0, { mergeDuplicates: true });
+    expect(mergedResult.points.length).toBe(2);
   });
 
   it('filters noise with 4m hysteresis for gain and loss', async () => {
-    // Sequence of elevations:
-    // 1000 -> 1002 (+2: ignored, delta < 4)
-    // -> 1005 (total +5 from 1000: counts +5, new ref is 1005)
-    // -> 1003 (-2: ignored, delta < 4)
-    // -> 999 (total -6 from 1005: counts -6, new ref is 999)
     const raw: RawPoint[] = [
       { lat: 46.000, lng: 7.00, gpsAltitude: 1000 },
       { lat: 46.001, lng: 7.00, gpsAltitude: 1002 },
@@ -62,5 +62,22 @@ describe('routeProcessor', () => {
     expect(result.stats.highestElevation).toBe(1005);
     expect(result.stats.lowestElevation).toBe(999);
   });
-});
 
+  it('recalculates distance and stats when waypoints are excluded', () => {
+    const waypoints: TrekPoint[] = [
+      { id: 'p1', lat: 46.000, lng: 7.000, elevation: 1000, distance: 0, time: 1000 },
+      { id: 'p2', lat: 46.010, lng: 7.000, elevation: 1100, distance: 1113, time: 2000 },
+      { id: 'p3', lat: 46.020, lng: 7.000, elevation: 1200, distance: 2226, time: 3000 },
+    ];
+
+    // Exclude middle point p2
+    const { points, stats } = recalculateTrekRoute(waypoints, new Set(['p2']));
+    expect(points.length).toBe(2);
+    expect(points[0].id).toBe('p1');
+    expect(points[1].id).toBe('p3');
+    expect(points[0].distance).toBe(0);
+    // Direct p1 to p3 distance is approx 2226m
+    expect(points[1].distance).toBeGreaterThan(2000);
+    expect(stats.pointsCount).toBe(2);
+  });
+});

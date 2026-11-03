@@ -60,6 +60,7 @@ export function applyPrivacyTrim(
     }
 
     trimmedPoints.push({
+      id: pt.id,
       lat: pt.lat,
       lng: pt.lng,
       time: pt.time,
