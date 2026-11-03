@@ -67,3 +67,4 @@ describe('mapThemes and appearance presets', () => {
     expect(DEFAULT_APPEARANCE_SETTINGS.waypointDensity).toBe('all');
   });
 });
+

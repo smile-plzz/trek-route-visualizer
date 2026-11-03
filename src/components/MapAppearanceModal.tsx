@@ -276,3 +276,4 @@ export const MapAppearanceModal: React.FC<MapAppearanceModalProps> = ({
     </div>
   );
 };
+

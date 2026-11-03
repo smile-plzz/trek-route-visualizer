@@ -155,3 +155,4 @@ export const DEFAULT_APPEARANCE_SETTINGS: MapAppearanceSettings = {
   lineWidth: 4.5,
   waypointDensity: 'all',
 };
+
